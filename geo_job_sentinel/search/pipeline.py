@@ -75,7 +75,7 @@ def run_discovery_scan() -> Tuple[List[JobPosting], dict]:
     cfg = load_config()
 
     discovery_query = (
-        '"GIS" OR "Geospatial" OR "Remote Sensing" '
+        '"GIS" OR "Geospatial" OR "Remote Sensing" OR "spatial data" '
         '"we are hiring" OR "we\'re hiring" OR "careers" OR "join our team"'
     )
 
@@ -102,24 +102,80 @@ def run_discovery_scan() -> Tuple[List[JobPosting], dict]:
     return jobs, stats
 
 
+def run_company_seed_scan() -> Tuple[List[JobPosting], dict]:
+    """Scan specific company domains seeded from config/company_seeds.json.
+
+    This lets you feed in domains from startup lists, GIS communities, etc.
+    """
+
+    cfg = load_config()
+    if not cfg.company_seeds:
+        return [], {"new_jobs": 0, "total_scanned": 0, "duplicates_filtered": 0, "by_source": {}}
+
+    client = SerperClient(api_key=cfg.serper_api_key)
+
+    jobs: List[JobPosting] = []
+    seen_ids: set[str] = set()
+    total_scanned = 0
+
+    for domain in cfg.company_seeds:
+        domain = domain.strip()
+        if not domain:
+            continue
+
+        query = (
+            f'"GIS" OR "Geospatial" OR "Remote Sensing" OR "spatial" '
+            f'site:{domain}'
+        )
+
+        raw_results = client.search_jobs(query, num=5)
+        total_scanned += len(raw_results)
+
+        for item in raw_results:
+            job = normalize_result(
+                item,
+                source="Discovery/SeedCompanies",
+                is_new_company=True,
+            )
+            if job.id in seen_ids:
+                continue
+            seen_ids.add(job.id)
+            jobs.append(job)
+
+    stats = {
+        "new_jobs": len(jobs),
+        "total_scanned": total_scanned,
+        "duplicates_filtered": total_scanned - len(jobs),
+        "by_source": {"Discovery/SeedCompanies": len(jobs)},
+    }
+
+    return jobs, stats
+
+
 def run_full_scan() -> Tuple[List[JobPosting], dict]:
-    """Combine ATS-based GIS scan with discovery mode into one run."""
+    """Combine ATS-based scan, broad discovery, and seed-company scan."""
 
     ats_jobs, ats_stats = run_gis_scan()
     discovery_jobs, discovery_stats = run_discovery_scan()
+    seed_jobs, seed_stats = run_company_seed_scan()
 
-    all_jobs = ats_jobs + discovery_jobs
+    all_jobs = ats_jobs + discovery_jobs + seed_jobs
 
-    total_scanned = ats_stats.get("total_scanned", 0) + discovery_stats.get(
-        "total_scanned", 0
+    total_scanned = (
+        ats_stats.get("total_scanned", 0)
+        + discovery_stats.get("total_scanned", 0)
+        + seed_stats.get("total_scanned", 0)
     )
-    duplicates_filtered = ats_stats.get("duplicates_filtered", 0) + discovery_stats.get(
-        "duplicates_filtered", 0
+    duplicates_filtered = (
+        ats_stats.get("duplicates_filtered", 0)
+        + discovery_stats.get("duplicates_filtered", 0)
+        + seed_stats.get("duplicates_filtered", 0)
     )
 
     by_source = ats_stats.get("by_source", {}).copy()
-    for src, count in discovery_stats.get("by_source", {}).items():
-        by_source[src] = by_source.get(src, 0) + count
+    for stats in (discovery_stats, seed_stats):
+        for src, count in stats.get("by_source", {}).items():
+            by_source[src] = by_source.get(src, 0) + count
 
     stats = {
         "new_jobs": len(all_jobs),

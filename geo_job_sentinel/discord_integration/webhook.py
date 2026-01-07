@@ -58,8 +58,12 @@ def send_job_card(job: JobPosting) -> None:
     if not cfg.discord_webhook_url:
         raise RuntimeError("DISCORD_WEBHOOK_URL not configured")
 
+    header = ""
+    if job.is_new_company:
+        header = f"🆕 NEW COMPANY! {job.company}\n"
+
     content = (
-        f"**{job.title}**\n"
+        f"{header}**{job.title}**\n"
         f"{job.description_snippet[:280]}...\n\n"
         f"🏢 Company\n{job.company}\n"
         f"📍 Location\n{job.location}\n"

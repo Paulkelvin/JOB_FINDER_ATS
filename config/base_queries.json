@@ -1,0 +1,17 @@
+{
+  "gis_default": {
+    "title_keywords": [
+      "\"GIS Analyst\"",
+      "\"Geospatial Analyst\"",
+      "\"Geographic Information Systems\"",
+      "\"Remote Sensing\"",
+      "\"GIS Technician\"",
+      "\"GIS Developer\""
+    ],
+    "location_keywords": [
+      "\"remote\"",
+      "\"hybrid\"",
+      "\"onsite\""
+    ]
+  }
+}

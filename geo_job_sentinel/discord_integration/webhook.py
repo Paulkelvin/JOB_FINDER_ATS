@@ -81,6 +81,9 @@ def send_job_card(job: JobPosting) -> None:
     }
 
     resp = requests.post(cfg.discord_webhook_url, json=payload, timeout=20)
+    if resp.status_code == 429:
+        # Hit Discord rate limit for this webhook; skip this card instead of failing the run.
+        return
     resp.raise_for_status()
 
 
@@ -109,4 +112,6 @@ def send_summary(jobs: Iterable[JobPosting], stats: dict) -> None:
     }
 
     resp = requests.post(cfg.discord_webhook_url, json=payload, timeout=20)
+    if resp.status_code == 429:
+        return
     resp.raise_for_status()

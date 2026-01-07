@@ -7,7 +7,10 @@ from geo_job_sentinel.discord_integration.webhook import send_job_card, send_sum
 def main() -> None:
     jobs, stats = run_full_scan()
 
-    for job in jobs:
+    # Limit number of individual job cards per run to avoid hitting
+    # Discord webhook rate limits.
+    max_cards = 15
+    for job in jobs[:max_cards]:
         send_job_card(job)
 
     send_summary(jobs, stats)

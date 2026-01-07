@@ -23,13 +23,14 @@ class AppConfig:
     ats_domains: List[str]
     base_queries: dict
     company_seeds: List[str]
+    twitter_bearer_token: str | None
 
 
 def load_config() -> AppConfig:
     load_dotenv(BASE_DIR / ".env")
 
     ats_path = os.getenv("ATS_DOMAINS_CONFIG", "config/ats_domains.json")
-    base_queries_path = os.getenv("BASE_QUERY_CONFIG", "config/base_queries.json")
+        base_queries_path = os.getenv("BASE_QUERY_CONFIG", "config/base_queries.json")
     company_seeds_path = os.getenv("COMPANY_SEEDS_CONFIG", "config/company_seeds.json")
 
     with open(BASE_DIR / ats_path, "r", encoding="utf-8") as f:
@@ -54,4 +55,5 @@ def load_config() -> AppConfig:
         ats_domains=ats_domains,
         base_queries=base_queries,
         company_seeds=company_seeds,
+        twitter_bearer_token=os.getenv("TWITTER_BEARER_TOKEN"),
     )

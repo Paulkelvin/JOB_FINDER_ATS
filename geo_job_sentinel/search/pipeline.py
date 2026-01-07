@@ -222,18 +222,23 @@ def run_full_scan() -> Tuple[List[JobPosting], dict]:
 
     all_jobs = ats_jobs + discovery_jobs + seed_jobs + twitter_jobs
 
+    # Cross-source deduplication by URL (or id fallback).
+    unique_jobs: List[JobPosting] = []
+    seen_keys: set[str] = set()
+    for job in all_jobs:
+        key = job.url or job.id
+        if key in seen_keys:
+            continue
+        seen_keys.add(key)
+        unique_jobs.append(job)
+
     total_scanned = (
         ats_stats.get("total_scanned", 0)
         + discovery_stats.get("total_scanned", 0)
         + seed_stats.get("total_scanned", 0)
         + twitter_stats.get("total_scanned", 0)
     )
-    duplicates_filtered = (
-        ats_stats.get("duplicates_filtered", 0)
-        + discovery_stats.get("duplicates_filtered", 0)
-        + seed_stats.get("duplicates_filtered", 0)
-        + twitter_stats.get("duplicates_filtered", 0)
-    )
+    duplicates_filtered = total_scanned - len(unique_jobs)
 
     by_source = ats_stats.get("by_source", {}).copy()
     for stats in (discovery_stats, seed_stats, twitter_stats):
@@ -241,10 +246,10 @@ def run_full_scan() -> Tuple[List[JobPosting], dict]:
             by_source[src] = by_source.get(src, 0) + count
 
     stats = {
-        "new_jobs": len(all_jobs),
+        "new_jobs": len(unique_jobs),
         "total_scanned": total_scanned,
         "duplicates_filtered": duplicates_filtered,
         "by_source": by_source,
     }
 
-    return all_jobs, stats
+    return unique_jobs, stats
